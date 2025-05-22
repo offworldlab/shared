@@ -83,13 +83,9 @@ for cntCnfg=1:numCnfg,
         fprintf('.');
         NseStd=10^(sigma2_d/20);
         Q_alpha = 10^(sigma2_d/10) * R;
-        CRLB = TDOAFDOALocMvgSrcSenCRLB(so,s_doto,uo,u_doto,Q_alpha);
-        crlbu(cntCnfg,i) = trace(CRLB(1:N,1:N));
-        crlbudot(cntCnfg,i) = trace(CRLB(N+1:end,N+1:end));
         
-        SimMSEu = 0; SimMSEudot = 0;
-        SimMSEuBR = 0; SimMSEudotBR = 0;
-        
+        SimMSEuBR = 0; 
+        SimMSEudotBR = 0;
         for k = 1 : L,
             % Noisy TDOA and FDOA measurements.
             Delta_r = (chol_R'*randn(2*(M-1),1)-PP)*NseStd;
@@ -97,14 +93,9 @@ for cntCnfg=1:numCnfg,
             rd = rdo + Delta_r(1:M-1);
             rd_dot = rd_doto + Delta_r(M:end);
             
-            % --- previous solution (Ho & Xu, T-SP, 2004)
-            [u,u_dot] = TDOAFDOALocMvgSrcSen(so,s_doto,rd,rd_dot,Q_alpha);
-            
             % --- bias reduction solution ---
             [uBR,u_dotBR] = TDOAFDOALoc_BiasRed(so,s_doto,rd,rd_dot,Q_alpha);
             
-            SimMSEu = SimMSEu + norm(u-uo)^2;
-            SimMSEudot = SimMSEudot + norm(u_dot-u_doto)^2;
             SimMSEuBR = SimMSEuBR + norm(uBR-uo)^2;
             SimMSEudotBR = SimMSEudotBR + norm(u_dotBR-u_doto)^2;
             uAll(:,k)=u;
@@ -114,15 +105,9 @@ for cntCnfg=1:numCnfg,
             
         end;
         
-        mseu(cntCnfg,i) = SimMSEu/L;
-        mseudot(cntCnfg,i) = SimMSEudot/L;
-        mseuBR(cntCnfg,i) = SimMSEuBR/L;
-        mseudotBR(cntCnfg,i) = SimMSEudotBR/L;
-        biasu(cntCnfg,i)=(norm(mean(uAll,2)-uo));
-        biasuBR(cntCnfg,i)=(norm(mean(uBRAll,2)-uo));
-        biasudot(cntCnfg,i)=(norm(mean(u_dotAll,2)-u_doto));
-        biasudotBR(cntCnfg,i)=(norm(mean(u_dotBRAll,2)-u_doto));
-        
+        mseuBR(cntCnfg,i)   = SimMSEuBR/L;
+        pseudotBR(cntCnfg,i)= SimMSEudotBR/L;
+
         i = i + 1;                        % Update loop counter.
     end;
     fprintf('\n');
@@ -134,32 +119,16 @@ xLabelTxt='20 log(\\sigma_r)';
 
 % Plot the result.
 figure(11);
-h=plot(sigma2_dVec,10*log10(mseuBR),'kx','MarkerSize',8); set(h,'linewidth',2); hold on; grid on;
-h=plot(sigma2_dVec,10*log10(mseu),'ko','MarkerSize',8); set(h,'linewidth',2);
-h=plot(sigma2_dVec,10*log10(crlbu),'k','LineWidth',1); set(h,'linewidth',2);
-xlabel(xLabelTxt); ylabel('l0 log(MSE), Position');
-legend('BiasRed','WMLS,Ho-Xu(2004)','CRLB',2);
+x=10*log10(mseuBR);
+h=plot(sigma2_dVec,x,'kx-','MarkerSize',8,'LineWidth',2); hold on; grid on;
+xlabel(xLabelTxt); ylabel('10 log(MSE), Position');
+legend('BiasRed',2);
 hold off;
 
 figure(12);
-h=plot(sigma2_dVec,10*log10(mseudotBR),'kx','MarkerSize',8); set(h,'linewidth',2); hold on; grid on;
-h=plot(sigma2_dVec,10*log10(mseudot),'ko','MarkerSize',8); set(h,'linewidth',2);
-h=plot(sigma2_dVec,10*log10(crlbudot),'k','LineWidth',1); set(h,'linewidth',2);
+x2=10*log10(pseudotBR);
+h=plot(sigma2_dVec,x2,'kx-','MarkerSize',8,'LineWidth',2); hold on; grid on;
 xlabel(xLabelTxt); ylabel('10 log(MSE), Velocity');
-legend('BiasRed','WMLS,Ho-Xu(2004)','CRLB',2);
-hold off;
-
-figure(13);
-h=plot(sigma2_dVec,20*log10(biasuBR)/1,'kx','MarkerSize',8); set(h,'linewidth',2); hold on; grid on;
-h=plot(sigma2_dVec,20*log10(biasu)/1,'ko','MarkerSize',8); set(h,'linewidth',2);
-xlabel(xLabelTxt); ylabel('20 log(bias), Position');
-legend('BiasRed','WMLS,Ho-Xu(2004)',2);
-hold off;
-
-figure(14);
-h=plot(sigma2_dVec,20*log10(biasudotBR)/1,'kx','MarkerSize',8); set(h,'linewidth',2); hold on; grid on;
-h=plot(sigma2_dVec,20*log10(biasudot)/1,'ko','MarkerSize',8); set(h,'linewidth',2);
-xlabel(xLabelTxt); ylabel('20 log(bias), Velocity');
-legend('BiasRed','WMLS,Ho-Xu(2004)',2);
+legend('BiasRed',2);
 hold off;
 
