@@ -83,21 +83,28 @@ for cntCnfg=1:numCnfg,
         fprintf('.');
         NseStd=10^(sigma2_d/20);
         Q_alpha = 10^(sigma2_d/10) * R;
-        
-        SimMSEuBR = 0; 
-        SimMSEudotBR = 0;
+
+SimMSEu      = 0;
+SimMSEudot   = 0;
+SimMSEuBR    = 0;
+SimMSEudotBR = 0;
+
         for k = 1 : L,
-            % Noisy TDOA and FDOA measurements.
-            Delta_r = (chol_R'*randn(2*(M-1),1)-PP)*NseStd;
-            
-            rd = rdo + Delta_r(1:M-1);
-            rd_dot = rd_doto + Delta_r(M:end);
-            
-            % --- bias reduction solution ---
-            [uBR,u_dotBR] = TDOAFDOALoc_BiasRed(so,s_doto,rd,rd_dot,Q_alpha);
-            
-            SimMSEuBR = SimMSEuBR + norm(uBR-uo)^2;
-            SimMSEudotBR = SimMSEudotBR + norm(u_dotBR-u_doto)^2;
+
+% --- Noisy TDOA and FDOA measurements
+Delta_r = (chol_R'*randn(2*(M-1),1)-PP)*NseStd;
+rd      = rdo  + Delta_r(1:M-1);
+rd_dot  = rd_doto + Delta_r(M:end);
+% --- original WMLS solution (Ho & Xu, T-SP 2004)
+[u,u_dot] = TDOAFDOALocMvgSrcSen(so, s_doto, rd, rd_dot, Q_alpha);
+% --- bias‐reduction solution (Ho 2012)
+[uBR,u_dotBR] = TDOAFDOALoc_BiasRed(so, s_doto, rd, rd_dot, Q_alpha);
+% now you can safely do
+SimMSEu    = SimMSEu    + norm(u   - uo   )^2;
+SimMSEudot = SimMSEudot + norm(u_dot - u_doto)^2;
+SimMSEuBR  = SimMSEuBR  + norm(uBR   - uo   )^2;
+SimMSEudotBR = SimMSEudotBR + norm(u_dotBR - u_doto)^2;
+
             uAll(:,k)=u;
             u_dotAll(:,k)=u_dot;
             uBRAll(:,k)=uBR;
